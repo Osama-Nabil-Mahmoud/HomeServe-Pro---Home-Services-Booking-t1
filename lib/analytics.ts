@@ -1,7 +1,11 @@
 
 export const trackEvent = (eventName: string, params?: Record<string, any>) => {
-  console.log(`[Analytics] Event: ${eventName}`, params || '');
-  // Example: window.gtag?.('event', eventName, params);
+  try {
+    console.log(`[Analytics] Event: ${eventName}`, params || '');
+    // Example: window.gtag?.('event', eventName, params);
+  } catch (e) {
+    console.error("Analytics tracking failed", e);
+  }
 };
 
 export const EVENTS = {

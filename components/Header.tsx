@@ -1,7 +1,6 @@
-"use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSettings } from '../context/SettingsProvider';
+import { useSettings } from '../context/SettingsContext';
 import { Sun, Moon, Languages, Menu, X, Smartphone, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const Header: React.FC = () => {

@@ -1,16 +1,18 @@
-
-import React, { ErrorInfo, ReactNode } from 'react';
+"use client";
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
-  children: ReactNode;
+  // Make children optional to avoid "missing children" errors in some JSX environments
+  children?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  // Added constructor to ensure props are correctly bound to the class instance and available on this.props
+// Inheriting directly from Component and using a constructor often resolves generic type inference issues in class components
+class ErrorBoundary extends Component<Props, State> {
+  // Use constructor for state initialization to ensure proper inheritance context and property binding
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -27,6 +29,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public render() {
+    // Check if the component has caught an error
     if (this.state.hasError) {
       return (
         <div className="p-6 border border-red-200 bg-red-50 text-red-800 rounded-xl">
@@ -36,7 +39,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Correctly accessing children via this.props as defined in the Component generics
+    // Return children as defined in the Component generics
     return this.props.children;
   }
 }

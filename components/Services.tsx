@@ -1,34 +1,16 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSettings } from '../context/SettingsProvider';
+import { useSettings } from '../context/SettingsContext';
 import { 
-  Droplets, 
-  Zap, 
-  Wind, 
-  Trash2, 
-  Hammer, 
-  Paintbrush, 
-  Tv, 
-  Bug,
-  X,
-  Calendar,
-  MapPin,
-  Clock,
-  Info,
-  AlertCircle,
-  ArrowRight,
-  MessageSquare,
-  Mail,
-  CheckCircle,
-  Copy,
-  ExternalLink
+  Droplets, Zap, Wind, Trash2, Hammer, Paintbrush, Tv, Bug, X, Calendar, MapPin, Info, AlertCircle, ArrowRight, MessageSquare, Mail, CheckCircle
 } from 'lucide-react';
 import { sendContact } from '../lib/contact';
 import { trackEvent, EVENTS } from '../lib/analytics';
 
 const Services: React.FC = () => {
-  const { t, settings } = useSettings();
+  const { t, settings, showCopyModal } = useSettings();
   const isRtl = settings.language === 'ar';
 
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -36,9 +18,7 @@ const Services: React.FC = () => {
   const [contactMethod, setContactMethod] = useState<'whatsapp' | 'gmail'>('whatsapp');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-
+  // Modal Form State
   const [formData, setFormData] = useState({
     date: '',
     city: '',
@@ -93,6 +73,7 @@ const Services: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
     trackEvent(EVENTS.CTA_BOOK_NOW, { service: selectedService, ...formData, method: contactMethod });
 
     const isAr = settings.language === 'ar';
@@ -122,35 +103,21 @@ Please confirm the booking and provide the ETA. Thanks`;
 
     const emailSubject = isAr ? `طلب حجز خدمة: ${selectedService}` : `Booking Request: ${selectedService}`;
 
-    const result = sendContact({
+    // Close booking modal first to avoid stacking issues as requested
+    handleCloseModal();
+
+    sendContact({
       method: contactMethod,
       whatsappMessage: messageContent,
       subject: emailSubject,
-      body: messageContent
+      body: messageContent,
+      onShowCopyModal: (data) => showCopyModal(data)
     });
-    
-    if (typeof result === 'string') {
-      setBlockedUrl(result);
-      setIsSubmitting(false);
-    } else {
-      handleCloseModal();
-    }
-  };
-
-  const handleCopyLink = () => {
-    if (blockedUrl) {
-      navigator.clipboard.writeText(blockedUrl);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
   };
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleCloseModal();
-        setBlockedUrl(null);
-      }
+      if (e.key === 'Escape') handleCloseModal();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
@@ -172,6 +139,7 @@ Please confirm the booking and provide the ETA. Thanks`;
               : 'Everything your home needs is here. Specialized technicians for all fields with quality assurance.'}
           </p>
         </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {services.map((service) => (
             <div 
@@ -187,6 +155,7 @@ Please confirm the booking and provide the ETA. Thanks`;
               <p className="text-slate-500 dark:text-slate-400 text-sm font-bold leading-relaxed mb-6">
                 {isRtl ? 'صيانة احترافية بضمان حقيقي' : 'Professional maintenance with warranty'}
               </p>
+              
               <button 
                 onClick={() => handleOpenModal(service.title)}
                 className="w-full py-3.5 bg-primary text-white rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-primary/20 active:scale-95"
@@ -198,7 +167,7 @@ Please confirm the booking and provide the ETA. Thanks`;
         </div>
       </div>
 
-      {isModalOpen && !blockedUrl && (
+      {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div 
             className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20 flex flex-col max-h-[95vh] relative"
@@ -217,94 +186,156 @@ Please confirm the booking and provide the ETA. Thanks`;
                 <X size={24} />
               </button>
             </div>
+
             <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-6">
+              
               <div className="space-y-2">
-                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'الخدمة المختارة' : 'Selected Service'}</label>
+                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                  {isRtl ? 'الخدمة المختارة' : 'Selected Service'}
+                </label>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] p-5 font-black text-lg text-slate-900 dark:text-white flex items-center gap-3">
                   <Info className="text-primary" size={20} />
                   {selectedService}
                 </div>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'التاريخ' : 'Date'}</label>
+                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                    {isRtl ? 'التاريخ' : 'Date'}
+                  </label>
                   <div className="relative">
                     <Calendar className={`absolute ${isRtl ? 'right-5' : 'left-5'} top-1/2 -translate-y-1/2 text-primary`} size={20} />
-                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className={`w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] ${isRtl ? 'pr-12 pl-4' : 'pl-12 pr-4'} py-4 outline-none font-bold text-slate-900 dark:text-white`} />
+                    <input 
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      className={`w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] ${isRtl ? 'pr-12 pl-4' : 'pl-12 pr-4'} py-4 outline-none font-bold text-slate-900 dark:text-white`}
+                    />
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'المدينة' : 'City'}</label>
+                  <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                    {isRtl ? 'المدينة' : 'City'}
+                  </label>
                   <div className="relative">
                     <MapPin className={`absolute ${isRtl ? 'right-5' : 'left-5'} top-1/2 -translate-y-1/2 text-primary`} size={20} />
-                    <select required value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className={`w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] ${isRtl ? 'pr-12 pl-4' : 'pl-12 pr-4'} py-4 outline-none font-bold text-slate-900 dark:text-white appearance-none cursor-pointer`}>
+                    <select 
+                      required
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      className={`w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] ${isRtl ? 'pr-12 pl-4' : 'pl-12 pr-4'} py-4 outline-none font-bold text-slate-900 dark:text-white appearance-none cursor-pointer`}
+                    >
                       <option value="">{isRtl ? 'اختر المدينة' : 'Select City'}</option>
                       {cities.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </div>
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'الوقت المفضل' : 'Preferred Time'}</label>
+                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                  {isRtl ? 'الوقت المفضل' : 'Preferred Time'}
+                </label>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-[1.5rem] border border-slate-200 dark:border-slate-700">
                   {times.map(tOption => (
-                    <button key={tOption} type="button" onClick={() => setFormData({...formData, time: tOption})} className={`flex-1 py-3 px-2 rounded-xl font-black text-[15px] transition-all ${formData.time === tOption ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500'}`}>{tOption}</button>
+                    <button 
+                      key={tOption}
+                      type="button"
+                      onClick={() => setFormData({...formData, time: tOption})}
+                      className={`flex-1 py-3 px-2 rounded-xl font-black text-[15px] transition-all ${formData.time === tOption ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500'}`}
+                    >
+                      {tOption}
+                    </button>
                   ))}
                 </div>
               </div>
+
               <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-lg"><AlertCircle size={20} /></div>
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-lg">
+                      <AlertCircle size={20} />
+                    </div>
                     <span className="font-black text-lg text-slate-900 dark:text-white">{isRtl ? 'طوارئ' : 'Emergency'}</span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={formData.emergency} onChange={(e) => setFormData({...formData, emergency: e.target.checked})} />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={formData.emergency}
+                      onChange={(e) => setFormData({...formData, emergency: e.target.checked})}
+                    />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-secondary"></div>
                   </label>
                 </div>
-                <p className="text-xs font-bold text-slate-500">{isRtl ? 'الطوارئ: وصول خلال 30 دقيقة حسب التوفر.' : 'Emergency: 30-min arrival based on availability.'}</p>
+                <p className="text-xs font-bold text-slate-500">
+                  {isRtl ? 'الطوارئ: وصول خلال 30 دقيقة حسب التوفر.' : 'Emergency: 30-min arrival based on availability.'}
+                </p>
               </div>
+
               <div className="space-y-4">
-                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'طريقة التواصل' : 'Contact Method'}</label>
+                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                  {isRtl ? 'طريقة التواصل' : 'Contact Method'}
+                </label>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-[1.5rem] border border-slate-200 dark:border-slate-700">
-                  <button type="button" onClick={() => handleMethodChange('whatsapp')} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black text-sm transition-all ${contactMethod === 'whatsapp' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}><MessageSquare size={16} />{isRtl ? 'واتساب' : 'WhatsApp'}</button>
-                  <button type="button" onClick={() => handleMethodChange('gmail')} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black text-sm transition-all ${contactMethod === 'gmail' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}><Mail size={16} />Gmail</button>
+                  <button 
+                    type="button"
+                    onClick={() => handleMethodChange('whatsapp')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black text-sm transition-all ${contactMethod === 'whatsapp' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}
+                  >
+                    <MessageSquare size={16} />
+                    {isRtl ? 'واتساب' : 'WhatsApp'}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => handleMethodChange('gmail')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black text-sm transition-all ${contactMethod === 'gmail' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400'}`}
+                  >
+                    <Mail size={16} />
+                    Gmail
+                  </button>
                 </div>
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{isRtl ? 'ملاحظات (اختياري)' : 'Notes (Optional)'}</label>
-                <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} placeholder={isRtl ? 'اكتب تفاصيل سريعة عن المشكلة أو العنوان…' : 'Write brief details about the issue or address...'} className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] p-5 outline-none font-bold text-slate-900 dark:text-white min-h-[100px] resize-none"></textarea>
+                <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
+                  {isRtl ? 'ملاحظات (اختياري)' : 'Notes (Optional)'}
+                </label>
+                <textarea 
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  placeholder={isRtl ? 'اكتب تفاصيل سريعة عن المشكلة أو العنوان…' : 'Write brief details about the issue or address...'}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary rounded-[1.5rem] p-5 outline-none font-bold text-slate-900 dark:text-white min-h-[100px] resize-none"
+                ></textarea>
               </div>
+
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button type="submit" disabled={isSubmitting} className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-700 shadow-xl shadow-primary/20'} text-white py-5 rounded-[1.8rem] font-black text-xl transition-all flex items-center justify-center gap-3 group`}>
-                  {isSubmitting ? <CheckCircle className="animate-pulse" /> : (<>{contactMethod === 'whatsapp' ? (isRtl ? 'إرسال على واتساب' : 'Send to WhatsApp') : (isRtl ? 'إرسال على الإيميل' : 'Send to Email')}<ArrowRight size={22} className="group-hover:translate-x-1 transition-transform rtl:rotate-180" /></>)}
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-700 shadow-xl shadow-primary/20'} text-white py-5 rounded-[1.8rem] font-black text-xl transition-all flex items-center justify-center gap-3 group`}
+                >
+                  {isSubmitting ? (
+                    <CheckCircle className="animate-pulse" />
+                  ) : (
+                    <>
+                      {contactMethod === 'whatsapp' ? (isRtl ? 'إرسال على واتساب' : 'Send to WhatsApp') : (isRtl ? 'إرسال على الإيميل' : 'Send to Email')}
+                      <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform rtl:rotate-180" />
+                    </>
+                  )}
                 </button>
-                <button type="button" onClick={handleCloseModal} className="sm:w-1/3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-5 rounded-[1.8rem] font-black text-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">{isRtl ? 'إلغاء' : 'Cancel'}</button>
+                <button 
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="sm:w-1/3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-5 rounded-[1.8rem] font-black text-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  {isRtl ? 'إلغاء' : 'Cancel'}
+                </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {blockedUrl && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl border border-white/10 text-center space-y-8">
-            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mx-auto"><ExternalLink size={40} /></div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{isRtl ? 'لم نتمكن من فتح Gmail تلقائياً' : 'Could not open Gmail automatically'}</h3>
-              <p className="text-slate-500 font-bold">{isRtl ? 'فعّل Pop-ups للموقع أو افتح اللينك يدويًا' : 'Enable Pop-ups for this site or open the link manually'}</p>
-            </div>
-            <div className="space-y-4">
-              <div className="relative group">
-                <input type="text" readOnly value={blockedUrl} className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl p-4 pr-14 outline-none font-bold text-slate-400 text-sm overflow-hidden text-ellipsis whitespace-nowrap" />
-                <button onClick={handleCopyLink} className={`absolute ${isRtl ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${copySuccess ? 'bg-accent text-white' : 'bg-primary text-white hover:bg-blue-700'}`}>{copySuccess ? <CheckCircle size={20} /> : <Copy size={20} />}</button>
-              </div>
-              <div className="flex flex-col gap-3">
-                <a href={blockedUrl} target="_blank" rel="noopener noreferrer" className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black text-xl hover:bg-blue-700 shadow-xl shadow-primary/20 flex items-center justify-center gap-3">{isRtl ? 'فتح الرابط الآن' : 'Open Link Now'}<ExternalLink size={22} /></a>
-                <button onClick={() => { setBlockedUrl(null); handleCloseModal(); }} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 py-4 rounded-[1.5rem] font-black">{isRtl ? 'إغلاق' : 'Close'}</button>
-              </div>
-            </div>
           </div>
         </div>
       )}

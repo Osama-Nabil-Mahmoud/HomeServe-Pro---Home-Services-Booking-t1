@@ -1,7 +1,6 @@
-"use client";
 
 import React from 'react';
-import { useSettings } from '../context/SettingsProvider';
+import { useSettings } from '../context/SettingsContext';
 import { CheckCircle2, Award, Zap, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const Hero: React.FC = () => {
@@ -89,7 +88,7 @@ const Hero: React.FC = () => {
           <p className="text-base text-slate-400 font-bold opacity-75">{t('microcopy')}</p>
         </div>
 
-        {/* Hero Visual */}
+        {/* Hero Visual - Updated Container */}
         <div className="relative hidden lg:block perspective-1000">
           <div className={`relative z-10 transition-transform duration-700 ${isRtl ? 'rotate-y-[-12deg]' : 'rotate-y-[12deg]'}`}>
             <div className="relative p-6 bg-white dark:bg-slate-800 rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] border border-slate-100 dark:border-slate-700">
