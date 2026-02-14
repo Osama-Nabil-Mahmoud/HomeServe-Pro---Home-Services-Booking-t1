@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../App';
 import { Calendar, MapPin, Clock, ArrowRight, ArrowLeft, Zap, Info, ChevronDown } from 'lucide-react';
-import { openWhatsApp } from '../lib/whatsapp';
+import { sendContact } from '../lib/contact';
 import { trackEvent, EVENTS } from '../lib/analytics';
 
 const BookingWidget: React.FC = () => {
@@ -34,7 +34,8 @@ const BookingWidget: React.FC = () => {
       return;
     }
 
-    trackEvent(EVENTS.CTA_BOOK_NOW, formData);
+    // 1. Track Event
+    trackEvent(EVENTS.CTA_BOOK_NOW, { ...formData, source: 'widget' });
 
     const isAr = settings.language === 'ar';
     const emergencyLabel = formData.isEmergency ? (isAr ? 'نعم - عاجل' : 'Yes - Urgent') : (isAr ? 'لا' : 'No');
@@ -59,7 +60,15 @@ I'd like to book a service.
 • Notes: ${formData.notes || '-'}
 Please confirm availability and ETA. Thanks`;
 
-    openWhatsApp(message);
+    const subject = isAr ? `طلب حجز سريع: ${formData.service}` : `Quick Booking: ${formData.service}`;
+
+    // 2. Route via centralized utility (defaulting to WhatsApp for Quick Widget)
+    sendContact({
+      method: 'whatsapp',
+      whatsappMessage: message,
+      subject: subject,
+      body: message
+    });
   };
 
   const isAr = settings.language === 'ar';

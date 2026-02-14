@@ -20,7 +20,10 @@ import {
   AlertCircle,
   ArrowRight,
   MessageSquare,
-  Mail
+  Mail,
+  CheckCircle,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { sendContact } from '../lib/contact';
 import { trackEvent, EVENTS } from '../lib/analytics';
@@ -32,6 +35,11 @@ const Services: React.FC = () => {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contactMethod, setContactMethod] = useState<'whatsapp' | 'gmail'>('whatsapp');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fallback UI for blocked popups
+  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Modal Form State
   const [formData, setFormData] = useState({
@@ -56,7 +64,6 @@ const Services: React.FC = () => {
     { id: 'pest', icon: <Bug />, title: t('selectPest'), color: 'bg-emerald-600', shadow: 'shadow-emerald-500/20' },
   ];
 
-  // Load persistence
   useEffect(() => {
     try {
       const savedMethod = localStorage.getItem('contactMethod');
@@ -76,6 +83,7 @@ const Services: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedService(null);
+    setIsSubmitting(false);
   };
 
   const handleMethodChange = (method: 'whatsapp' | 'gmail') => {
@@ -87,55 +95,70 @@ const Services: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
+    // Always track event
     trackEvent(EVENTS.CTA_BOOK_NOW, { service: selectedService, ...formData, method: contactMethod });
 
     const isAr = settings.language === 'ar';
     const emergencyLabel = formData.emergency ? (isAr ? 'نعم' : 'Yes') : (isAr ? 'لا' : 'No');
     
-    const whatsappMessage = isAr ? 
+    const messageContent = isAr ? 
 `مرحبًا HomeServe Pro 👋
-عايز أحجز خدمة.
-• الخدمة: ${selectedService}
-• التاريخ: ${formData.date || 'غير محدد'}
+أريد حجز خدمة صيانة منزلية بالبيانات التالية:
+• الخدمة المطلوبة: ${selectedService}
+• التاريخ المفضل: ${formData.date || 'غير محدد'}
 • المدينة: ${formData.city || 'غير محدد'}
 • الوقت: ${formData.time || 'غير محدد'}
-• طوارئ: ${emergencyLabel}
-• ملاحظات: ${formData.notes || '-'}
-من فضلك أكدوا المتاح وأقرب وقت وصول. شكراً` :
+• حالة طوارئ: ${emergencyLabel}
+• ملاحظات إضافية: ${formData.notes || 'لا يوجد'}
+
+يرجى تأكيد الحجز وتحديد موعد الوصول. شكراً` :
 `Hello HomeServe Pro 👋
-I'd like to book a service.
+I would like to book a home service with the following details:
 • Service: ${selectedService}
 • Date: ${formData.date || 'Not specified'}
 • City: ${formData.city || 'Not specified'}
 • Time: ${formData.time || 'Not specified'}
 • Emergency: ${emergencyLabel}
-• Notes: ${formData.notes || '-'}
-Please confirm availability and ETA. Thanks`;
+• Notes: ${formData.notes || 'None'}
 
-    const emailSubject = isAr ? "HomeServe Pro | طلب حجز خدمة" : "HomeServe Pro | Service Booking Request";
-    const emailBody = whatsappMessage;
+Please confirm the booking and provide the ETA. Thanks`;
 
-    // Show toast message
-    if (contactMethod === 'whatsapp') {
-      alert(isAr ? "فتح واتساب…" : "Opening WhatsApp...");
+    const emailSubject = isAr ? `طلب حجز خدمة: ${selectedService}` : `Booking Request: ${selectedService}`;
+
+    // Execute synchronous contact open
+    const result = sendContact({
+      method: contactMethod,
+      whatsappMessage: messageContent,
+      subject: emailSubject,
+      body: messageContent
+    });
+    
+    // Handle blocked popups
+    if (typeof result === 'string') {
+      setBlockedUrl(result);
     } else {
-      alert(isAr ? "فتح البريد…" : "Opening Email...");
+      handleCloseModal();
     }
     
-    sendContact({
-      method: contactMethod,
-      whatsappMessage,
-      subject: emailSubject,
-      body: emailBody
-    });
+    setIsSubmitting(false);
+  };
 
-    handleCloseModal();
+  const handleCopyLink = () => {
+    if (blockedUrl) {
+      navigator.clipboard.writeText(blockedUrl);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
   };
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleCloseModal();
+      if (e.key === 'Escape') {
+        handleCloseModal();
+        setBlockedUrl(null);
+      }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
@@ -185,7 +208,8 @@ Please confirm availability and ETA. Thanks`;
         </div>
       </div>
 
-      {isModalOpen && (
+      {/* Main Booking Modal */}
+      {isModalOpen && !blockedUrl && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div 
             className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20 flex flex-col max-h-[95vh] relative"
@@ -206,7 +230,6 @@ Please confirm availability and ETA. Thanks`;
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-6">
-              
               <div className="space-y-2">
                 <label className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">
                   {isRtl ? 'الخدمة المختارة' : 'Selected Service'}
@@ -333,10 +356,15 @@ Please confirm availability and ETA. Thanks`;
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button 
                   type="submit"
-                  className="flex-1 bg-primary text-white py-5 rounded-[1.8rem] font-black text-xl hover:bg-blue-700 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group"
+                  disabled={isSubmitting}
+                  className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-700 shadow-xl shadow-primary/20'} text-white py-5 rounded-[1.8rem] font-black text-xl transition-all flex items-center justify-center gap-3 group`}
                 >
-                  {contactMethod === 'whatsapp' ? (isRtl ? 'إرسال على واتساب' : 'Send to WhatsApp') : (isRtl ? 'إرسال على الإيميل' : 'Send to Email')}
-                  <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform rtl:rotate-180" />
+                  {isSubmitting ? <CheckCircle className="animate-pulse" /> : (
+                    <>
+                      {contactMethod === 'whatsapp' ? (isRtl ? 'إرسال على واتساب' : 'Send to WhatsApp') : (isRtl ? 'إرسال على الإيميل' : 'Send to Email')}
+                      <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform rtl:rotate-180" />
+                    </>
+                  )}
                 </button>
                 <button 
                   type="button"
@@ -347,6 +375,61 @@ Please confirm availability and ETA. Thanks`;
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Popup Manual Fallback Modal */}
+      {blockedUrl && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl border border-white/10 text-center space-y-8">
+            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mx-auto">
+              <ExternalLink size={40} />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                {isRtl ? 'لم نتمكن من فتح Gmail تلقائياً' : 'Could not open Gmail automatically'}
+              </h3>
+              <p className="text-slate-500 font-bold">
+                {isRtl ? 'فعّل Pop-ups للموقع أو افتح اللينك يدويًا' : 'Enable Pop-ups for this site or open the link manually'}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative group">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={blockedUrl} 
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl p-4 pr-14 outline-none font-bold text-slate-400 text-sm overflow-hidden text-ellipsis whitespace-nowrap"
+                />
+                <button 
+                  onClick={handleCopyLink}
+                  className={`absolute ${isRtl ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${copySuccess ? 'bg-accent text-white' : 'bg-primary text-white hover:bg-blue-700'}`}
+                >
+                  {copySuccess ? <CheckCircle size={20} /> : <Copy size={20} />}
+                </button>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <a 
+                  href={blockedUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black text-xl hover:bg-blue-700 shadow-xl shadow-primary/20 flex items-center justify-center gap-3"
+                >
+                  {isRtl ? 'فتح الرابط الآن' : 'Open Link Now'}
+                  <ExternalLink size={22} />
+                </a>
+                <button 
+                  onClick={() => { setBlockedUrl(null); handleCloseModal(); }}
+                  className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 py-4 rounded-[1.5rem] font-black"
+                >
+                  {isRtl ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

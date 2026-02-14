@@ -9,10 +9,11 @@ interface ContactParams {
   body: string;
 }
 
-export function sendContact(params: ContactParams) {
+export function sendContact(params: ContactParams): string | true {
   if (params.method === "gmail") {
-    openEmail(params.subject, params.body);
+    return openEmail(params.subject, params.body);
   } else {
     openWhatsApp(params.whatsappMessage);
+    return true;
   }
 }
