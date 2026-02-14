@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { X, Copy, CheckCircle, ExternalLink, Mail } from 'lucide-react';
 
@@ -8,49 +8,55 @@ const CopyEmailModal: React.FC = () => {
   const [copiedField, setCopiedField] = useState<'subject' | 'body' | 'all' | null>(null);
   const isRtl = settings.language === 'ar';
 
-  if (!copyModalData) return null;
-
-  const copyToClipboard = async (text: string) => {
-    // Primary method: modern Clipboard API
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return await navigator.clipboard.writeText(text);
+  const copyToClipboard = useCallback(async (text: string) => {
+    // محاولة استخدام الطريقة الحديثة أولاً
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.warn('Navigator clipboard failed, trying fallback', err);
+      }
     }
     
-    // Fallback method: traditional execCommand('copy') for non-secure/restricted contexts
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
+    // الطريقة البديلة للمتصفحات القديمة أو البيئات غير الآمنة (مثل AI Studio iframe)
     try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      // التأكد من أن العنصر غير مرئي ولا يؤثر على التنسيق
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
       const successful = document.execCommand('copy');
-      if (!successful) throw new Error('execCommand copy failed');
-    } catch (err) {
-      throw err;
-    } finally {
       document.body.removeChild(textArea);
+      return successful;
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      return false;
     }
-  };
+  }, []);
 
   const handleCopy = async (text: string, field: 'subject' | 'body' | 'all') => {
-    try {
-      await copyToClipboard(text);
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy text:', err);
-      // Optional: show a user-friendly error toast here
+    } else {
+      console.error('Copy action failed completely');
     }
   };
 
   const copyAll = () => {
+    if (!copyModalData) return;
     const text = `${isRtl ? 'الموضوع' : 'Subject'}: ${copyModalData.subject}\n\n${copyModalData.body}`;
     handleCopy(text, 'all');
   };
+
+  if (!copyModalData) return null;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300">

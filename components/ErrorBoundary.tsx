@@ -1,5 +1,5 @@
 "use client";
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   // Make children optional to avoid "missing children" errors in some JSX environments
@@ -10,15 +10,13 @@ interface State {
   hasError: boolean;
 }
 
-// Inheriting directly from Component and using a constructor often resolves generic type inference issues in class components
-class ErrorBoundary extends Component<Props, State> {
-  // Use constructor for state initialization to ensure proper inheritance context and property binding
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false
-    };
-  }
+// Fix: Using React.Component explicitly and property initialization to resolve 'state' and 'props' visibility issues.
+// This ensures that the TypeScript compiler correctly identifies these inherited members from the base React component.
+class ErrorBoundary extends React.Component<Props, State> {
+  // Fix: Initialize state as a class property to ensure it is correctly typed and visible on the class instance.
+  public state: State = {
+    hasError: false
+  };
 
   public static getDerivedStateFromError(_: Error): State {
     return { hasError: true };
@@ -29,7 +27,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public render() {
-    // Check if the component has caught an error
+    // Fix: Accessing 'state' which is now explicitly defined as a property of the class.
     if (this.state.hasError) {
       return (
         <div className="p-6 border border-red-200 bg-red-50 text-red-800 rounded-xl">
@@ -39,7 +37,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Return children as defined in the Component generics
+    // Fix: Accessing 'props' which is inherited from React.Component.
     return this.props.children;
   }
 }
