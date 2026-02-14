@@ -86,7 +86,7 @@ const Header: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => scrollToSection('booking')}
+            onClick={() => scrollToSection('services')}
             className="hidden sm:flex items-center gap-2 bg-primary text-white px-7 py-3 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-primary/20 active:scale-95"
           >
             {t('ctaBookNow')}
@@ -118,7 +118,7 @@ const Header: React.FC = () => {
           </div>
           <div className="mt-auto pb-32 flex flex-col gap-4">
             <button 
-              onClick={() => scrollToSection('booking')}
+              onClick={() => scrollToSection('services')}
               className="w-full bg-primary text-white py-5 rounded-3xl font-black text-xl shadow-2xl shadow-primary/30"
             >
               {t('ctaBookNow')}

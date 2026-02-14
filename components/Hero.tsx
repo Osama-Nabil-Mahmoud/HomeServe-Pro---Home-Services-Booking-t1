@@ -21,8 +21,8 @@ const Hero: React.FC = () => {
     }
   };
 
-  const scrollToBooking = () => {
-    const element = document.getElementById('booking');
+  const scrollToServices = () => {
+    const element = document.getElementById('services');
     if (element) {
       const headerOffset = 100;
       const elementPosition = element.getBoundingClientRect().top;
@@ -58,7 +58,7 @@ const Hero: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row gap-5 justify-center lg:justify-start">
             <button 
-              onClick={scrollToBooking}
+              onClick={scrollToServices}
               className="group bg-primary text-white px-10 py-5 rounded-[2rem] font-black text-xl hover:bg-blue-700 transition-all shadow-2xl shadow-primary/30 transform hover:-translate-y-1 flex items-center justify-center gap-3"
             >
               {t('ctaBookNow')}

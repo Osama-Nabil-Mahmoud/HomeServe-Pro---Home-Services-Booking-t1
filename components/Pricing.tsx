@@ -147,8 +147,8 @@ const Pricing: React.FC = () => {
               </ul>
               <button 
                 onClick={() => {
-                   const bookingEl = document.getElementById('booking');
-                   bookingEl?.scrollIntoView({ behavior: 'smooth' });
+                   const servicesEl = document.getElementById('services');
+                   servicesEl?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 className={`w-full py-5 rounded-[1.8rem] font-black text-xl transition-all flex items-center justify-center gap-3 ${
                 plan.isPopular ? 'bg-primary text-white hover:bg-blue-700 shadow-2xl shadow-primary/30' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-700'
