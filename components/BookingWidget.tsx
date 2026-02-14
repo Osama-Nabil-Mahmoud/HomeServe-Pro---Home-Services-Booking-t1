@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSettings } from '../App';
+import { useSettings } from '../context/SettingsProvider';
 import { Calendar, MapPin, Clock, ArrowRight, ArrowLeft, Zap, Info, ChevronDown } from 'lucide-react';
 import { sendContact } from '../lib/contact';
 import { trackEvent, EVENTS } from '../lib/analytics';
@@ -8,7 +9,6 @@ import { trackEvent, EVENTS } from '../lib/analytics';
 const BookingWidget: React.FC = () => {
   const { settings, t } = useSettings();
   
-  // Get today's date in YYYY-MM-DD format for the input
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -20,7 +20,7 @@ const BookingWidget: React.FC = () => {
   const [formData, setFormData] = useState({
     service: '',
     city: '',
-    time: getTodayDate(), // Set today's date as default
+    time: getTodayDate(),
     notes: '',
     isEmergency: false
   });
@@ -28,13 +28,11 @@ const BookingWidget: React.FC = () => {
   const isRtl = settings.language === 'ar';
 
   const handleBooking = () => {
-    // Validation
     if (!formData.service || !formData.city) {
       alert(isRtl ? 'برجاء اختيار الخدمة والمدينة أولاً' : 'Please select service and city first');
       return;
     }
 
-    // 1. Track Event
     trackEvent(EVENTS.CTA_BOOK_NOW, { ...formData, source: 'widget' });
 
     const isAr = settings.language === 'ar';
@@ -62,7 +60,6 @@ Please confirm availability and ETA. Thanks`;
 
     const subject = isAr ? `طلب حجز سريع: ${formData.service}` : `Quick Booking: ${formData.service}`;
 
-    // 2. Route via centralized utility (defaulting to WhatsApp for Quick Widget)
     sendContact({
       method: 'whatsapp',
       whatsappMessage: message,
@@ -94,8 +91,6 @@ Please confirm availability and ETA. Thanks`;
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12)] border border-slate-100 dark:border-slate-800 transform lg:-translate-y-1/2">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-end">
-        
-        {/* Submit Button (At the left in RTL, right in LTR) */}
         <div className="space-y-4 lg:order-first">
           <button 
             onClick={handleBooking}
@@ -108,8 +103,6 @@ Please confirm availability and ETA. Thanks`;
             </span>
           </button>
         </div>
-
-        {/* Time Select */}
         <div className="space-y-4 group">
           <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">
             {t('timeSelectPlaceholder')}
@@ -124,8 +117,6 @@ Please confirm availability and ETA. Thanks`;
             />
           </div>
         </div>
-
-        {/* City Select */}
         <div className="space-y-4 group">
           <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">
             {isRtl ? 'المدينة' : 'City'}
@@ -143,8 +134,6 @@ Please confirm availability and ETA. Thanks`;
             <ChevronDown className={`absolute ${isRtl ? 'left-5' : 'right-5'} top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none`} size={18} />
           </div>
         </div>
-
-        {/* Service Select */}
         <div className="space-y-4 group">
           <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">
             {t('navServices')}
@@ -163,7 +152,6 @@ Please confirm availability and ETA. Thanks`;
           </div>
         </div>
       </div>
-
       <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-10 pt-10 border-t border-slate-100 dark:border-slate-800">
         <div className="flex-1 max-w-lg w-full order-2 md:order-1">
           <div className="relative">
@@ -177,7 +165,6 @@ Please confirm availability and ETA. Thanks`;
             <Info className={`absolute ${isRtl ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 text-slate-300`} size={20} />
           </div>
         </div>
-
         <div className="flex items-center gap-6 order-1 md:order-2">
           <span className="font-black text-lg text-slate-700 dark:text-slate-200 tracking-tight">
             {t('emergencyLabel')}
@@ -193,7 +180,6 @@ Please confirm availability and ETA. Thanks`;
               <div className="w-14 h-8 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:bg-secondary transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-6"></div>
             </div>
           </label>
-          
           {formData.isEmergency && (
             <div className="flex items-center gap-2 text-secondary bg-secondary/10 px-6 py-3 rounded-2xl text-[15px] font-black animate-pulse">
               <Zap size={18} fill="currentColor" />
